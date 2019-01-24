@@ -1,49 +1,63 @@
+/*
+    Author: Kuba Gasiorowski
+    
+    Press space to swap between landscape/heatmap modes
+    Click the mouse to generate new terrain
+    Press enter to have terrain shift over
+*/
+
 import static java.awt.event.KeyEvent.*;
-import controlP5.*;
 
 int cols, rows;
-float scale = 1;
+final float scale = 3; // This controls how many vertices to calculate (lower scale = more vertices)
 
-float terrain[][];
-int transX, transY, transZ;
+float terrain[][]; // Elevation data
+int transX, transY, transZ; 
 float rotX, rotY, rotZ;
-int terrainWidth = 900;
-int terrainHeight = 900;
+int terrainWidth = 900; // How many pixels wide should the terrain be
+int terrainHeight = 900; // How many pixels tall should the terrain be
 
 // True for heat map, false for land
 boolean heatMap = false;
+
+// If true, new terrain will generate
+boolean moving = false;
 
 void setup(){
 
     println(width, height);
 
     fullScreen(P3D);
-    //size(800, 600, P3D);
     background(0);
     smooth();
+    noStroke();
 
     cols = int(terrainWidth/scale);
     rows = int(terrainHeight/scale);
 
     terrain = new float[cols][rows];
-    generateTerrain(terrain);
+    generateTerrain();
 
     transX = transY = transZ = 0;
     rotX = rotY = rotZ = 0;
 
+    frameRate(15);
+
 }
 
-void generateTerrain(float[][] terrainArray){
+float xoff = 0, yoff = 0;
+
+void generateTerrain(){
 
     noiseSeed((long)random(65536));
     
-    float xoff = 0;
+    xoff = 0;
     for(int x = 0; x < cols; x++, xoff += 0.007 * scale){
     
-        float yoff = 0;
+        yoff = 0;
         for(int y = 0; y < rows; y++, yoff += 0.007 * scale){
         
-            terrainArray[x][y] = map(noise(xoff, yoff), 0.2, 0.8, -50, 50);
+            terrain[x][y] = map(noise(xoff, yoff), 0.2, 0.8, -50, 50);
         
         }
     
@@ -51,12 +65,29 @@ void generateTerrain(float[][] terrainArray){
     
 }
 
-void draw(){
-
-    background(0);
-
-    generateTerrain(terrain);
+void moveTerrain(){
     
+    for(int x = 0; x < cols; x++)
+        for(int y = 0; y < rows-1; y++)        
+            terrain[x][y] = terrain[x][y+1];
+     
+    
+    xoff = 0;
+    
+    // Generate one more line of terrain here
+    for(int x = 0; x < cols; x++, xoff += 0.007 * scale){
+    
+        terrain[x][rows-1] = map(noise(xoff, yoff), 0.2, 0.8, -50, 50);
+    
+    }
+    
+    yoff += 0.007 * scale;
+     
+}
+
+void draw(){
+    
+    background(0);
     lights();
     
     translate(width/3.76, height/6, -250);
@@ -69,8 +100,6 @@ void draw(){
         for(int x = 0; x < cols; x++){
         
             if(heatMap){
-            
-                noStroke();
                 
                 fill(heatMap(terrain[x][y]));
                 vertex(x*scale, y*scale, terrain[x][y]);
@@ -79,16 +108,12 @@ void draw(){
                 vertex(x*scale, (y+1)*scale, terrain[x][y+1]);
             
             }else{
-            
-                noStroke();
                 
-                float terrainToDraw = terrain[x][y] < WATER_LEVEL? WATER_LEVEL : terrain[x][y];
                 fill(simpleLand(terrain[x][y]));
-                vertex(x*scale, y*scale, terrainToDraw);
+                vertex(x*scale, y*scale, terrain[x][y] < WATER_LEVEL? WATER_LEVEL : terrain[x][y]);
                 
-                terrainToDraw = terrain[x][y+1] < WATER_LEVEL ? WATER_LEVEL : terrain[x][y+1];
                 fill(simpleLand(terrain[x][y+1]));
-                vertex(x*scale, (y+1)*scale, terrainToDraw);
+                vertex(x*scale, (y+1)*scale, terrain[x][y+1] < WATER_LEVEL ? WATER_LEVEL : terrain[x][y+1]);
                 
             }
         
@@ -98,28 +123,59 @@ void draw(){
     
     }
 
-    delay(5000);
+    if(moving)
+        moveTerrain();
+
+}
+
+// Enter to start/stop movement
+// Space to swap color schemes
+void keyPressed(){
+
+    if(keyCode == VK_ENTER){
+    
+        if(moving)
+            noLoop();
+        else
+            loop();
+        
+        moving = !moving;
+    
+    }else if(keyCode == VK_SPACE){
+    
+        heatMap = !heatMap;
+    
+    }
+
+    redraw();
+
+}
+
+void mousePressed(){
+
+    generateTerrain();
+    redraw();
 
 }
 
 int WATER_LEVEL = -35;
 int GRASS_LEVEL = -25;
-int STONE_LEVEL = 13;
+int STONE_LEVEL = 0;
 int SNOW_LEVEL = 20;
 
 color simpleLand(float elevation){
     
-    if(elevation <= WATER_LEVEL)
-        return color(66, 106, 244);
-    else if(elevation > WATER_LEVEL && elevation < GRASS_LEVEL)
-        return color(247, 225, 101);
-    else if(elevation >= GRASS_LEVEL && elevation < STONE_LEVEL)
-        return color(41, 109, 39);
-    else if(elevation >= STONE_LEVEL && elevation < SNOW_LEVEL)
-        return color(120);
-    else
+    if(elevation >= SNOW_LEVEL)
         return color(255);
-
+    else if(elevation >= STONE_LEVEL)
+        return color(120);
+    else if(elevation >= GRASS_LEVEL)
+        return color(41, 109, 39);
+    else if(elevation >= WATER_LEVEL)
+        return color(247, 225, 101);
+    else
+        return color(66, 106, 244);
+    
 }
 
 color heatMap(float elevation){
