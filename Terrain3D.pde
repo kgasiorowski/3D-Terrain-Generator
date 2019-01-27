@@ -14,8 +14,8 @@ final float scale = 3; // This controls how many vertices to calculate (lower sc
 float terrain[][]; // Elevation data
 int transX, transY, transZ; 
 float rotX, rotY, rotZ;
-int terrainWidth = 900; // How many pixels wide should the terrain be
-int terrainHeight = 900; // How many pixels tall should the terrain be
+int terrainWidth; // How many pixels wide should the terrain be
+int terrainHeight; // How many pixels tall should the terrain be
 
 // True for heat map, false for land
 boolean heatMap = false;
@@ -25,12 +25,13 @@ boolean moving = false;
 
 void setup(){
 
-    println(width, height);
-
     fullScreen(P3D);
+    //size(1280, 800, P3D);
     background(0);
     smooth();
     noStroke();
+    
+    terrainWidth = terrainHeight = 900;
 
     cols = int(terrainWidth/scale);
     rows = int(terrainHeight/scale);
@@ -42,6 +43,7 @@ void setup(){
     rotX = rotY = rotZ = 0;
 
     frameRate(15);
+
 
 }
 
@@ -90,8 +92,8 @@ void draw(){
     background(0);
     lights();
     
-    translate(width/3.76, height/6, -250);
-    rotateX(PI/3.5);
+    translate(width/2-terrainWidth/2, height/2-terrainHeight/2, (height+width) * 0.27174 - 1015.22);
+    rotateX(PI/4.5);
     
     for(int y = 0; y < rows-1; y++){
     
@@ -125,6 +127,7 @@ void draw(){
 
     if(moving)
         moveTerrain();
+
 
 }
 
